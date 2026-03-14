@@ -1,0 +1,606 @@
+{% extends "predictor/base.html" %}
+{% block title %}Predict Attrition — AttritionIQ{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── Form layout ── */
+.predict-wrap {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 1.5rem;
+  align-items: start;
+}
+@media(max-width:900px){ .predict-wrap { grid-template-columns:1fr; } }
+
+/* ── Section tabs ── */
+.form-tabs {
+  display: flex; gap:.5rem; margin-bottom:1.5rem; flex-wrap:wrap;
+}
+.tab-btn {
+  padding:.45rem 1rem; border-radius:99px;
+  border:1px solid var(--border); background:transparent;
+  color:var(--muted); font-family:'DM Sans',sans-serif;
+  font-size:.82rem; cursor:pointer; transition:all .2s;
+}
+.tab-btn.active {
+  background:var(--accent); color:#0a0a0f;
+  border-color: var(--accent); font-weight:600;
+}
+
+/* ── Form sections ── */
+.form-section { display:none; }
+.form-section.active { display:block; }
+
+/* ── Field rows ── */
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.field-row.single { grid-template-columns:1fr; }
+.field-row.triple  { grid-template-columns:1fr 1fr 1fr; }
+
+.field-group { display:flex; flex-direction:column; gap:.35rem; }
+.field-group label {
+  font-size:.8rem; color:var(--muted);
+  font-weight:500; text-transform:uppercase; letter-spacing:.07em;
+}
+.field-group input,
+.field-group select {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .65rem 1rem;
+  color: var(--text);
+  font-family:'DM Sans',sans-serif; font-size:.92rem;
+  transition: border-color .2s;
+  width:100%;
+  -webkit-appearance:none;
+}
+.field-group input:focus,
+.field-group select:focus {
+  outline:none; border-color:var(--accent);
+}
+.field-group input[type="range"] {
+  padding:.2rem 0; background:transparent; border:none; cursor:pointer;
+}
+.range-val {
+  font-family:'Syne',sans-serif; font-weight:700;
+  color:var(--accent); font-size:1.1rem;
+}
+.field-hint { font-size:.75rem; color:var(--muted); margin-top:.15rem; }
+
+/* ── Navigation buttons ── */
+.form-nav {
+  display:flex; justify-content:space-between; align-items:center;
+  margin-top:1.5rem; padding-top:1.5rem;
+  border-top: 1px solid var(--border);
+}
+.step-indicator {
+  font-size:.8rem; color:var(--muted);
+}
+.step-dots {
+  display:flex; gap:.4rem;
+}
+.step-dot {
+  width:8px; height:8px; border-radius:99px;
+  background: var(--border); transition: background .3s;
+}
+.step-dot.done  { background: var(--accent); }
+.step-dot.active{ background: var(--accent); width:24px; }
+
+/* ── Result panel ── */
+.result-panel {
+  position: sticky; top: 80px;
+}
+
+.gauge-wrap {
+  position:relative; width:200px; height:110px; margin:1rem auto;
+}
+.gauge-wrap canvas { display:block; }
+.gauge-val {
+  position:absolute; bottom:0; left:50%; transform:translateX(-50%);
+  text-align:center;
+}
+.gauge-val .big {
+  font-family:'Syne',sans-serif; font-weight:800; font-size:2.2rem;
+}
+.gauge-val .lbl { font-size:.75rem; color:var(--muted); }
+
+.verdict-badge {
+  display:inline-block; padding:.4rem 1.2rem;
+  border-radius:99px; font-weight:700; font-size:.95rem;
+  font-family:'Syne',sans-serif; margin:0 auto; display:block;
+  width:fit-content; text-align:center;
+}
+.badge-low    { background:rgba(71,255,160,.15); color:#47ffa0; border:1px solid rgba(71,255,160,.3); }
+.badge-medium { background:rgba(255,189,71,.15); color:#ffbd47; border:1px solid rgba(255,189,71,.3); }
+.badge-high   { background:rgba(255,107,107,.15); color:#ff6b6b; border:1px solid rgba(255,107,107,.3); }
+
+.risk-factor-tag {
+  display:inline-block; margin:.2rem;
+  padding:.25rem .75rem; border-radius:99px;
+  background:rgba(255,107,107,.1); color:#ff9090;
+  border:1px solid rgba(255,107,107,.2);
+  font-size:.8rem;
+}
+
+.loading-ring {
+  width:40px; height:40px; border:3px solid var(--border);
+  border-top-color:var(--accent); border-radius:50%;
+  animation: spin .8s linear infinite; margin:1rem auto;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+
+.idle-state {
+  text-align:center; padding:2rem 1rem;
+}
+.idle-icon {
+  font-size:3rem; margin-bottom:.5rem;
+  filter: grayscale(1); opacity:.3;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <div style="padding:2.5rem 0 1.5rem;">
+    <div style="font-size:.8rem; color:var(--accent3); font-weight:600; letter-spacing:.1em; text-transform:uppercase; margin-bottom:.5rem;">ML Prediction Engine</div>
+    <h1 style="font-family:'Syne',sans-serif; font-size:2.2rem; font-weight:800;">
+      Predict Employee Attrition Risk
+    </h1>
+    <p style="color:var(--muted); margin-top:.5rem;">Fill in employee details across 4 sections to generate a prediction.</p>
+  </div>
+
+  <div class="predict-wrap">
+
+    <!-- LEFT: Form -->
+    <div class="card">
+
+      <div class="form-tabs" id="tabBar">
+        <button class="tab-btn active" data-sec="0">👤 Personal</button>
+        <button class="tab-btn"        data-sec="1">💼 Job Info</button>
+        <button class="tab-btn"        data-sec="2">💰 Compensation</button>
+        <button class="tab-btn"        data-sec="3">😊 Satisfaction</button>
+      </div>
+
+      <form id="predictForm">
+        {% csrf_token %}
+
+        <!-- Section 0: Personal -->
+        <div class="form-section active" data-sec="0">
+          <div class="field-row">
+            <div class="field-group">
+              <label>Age</label>
+              <input type="number" name="Age" value="32" min="18" max="65">
+            </div>
+            <div class="field-group">
+              <label>Gender</label>
+              <select name="Gender">
+                {% for g in genders %}<option>{{ g }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label>Marital Status</label>
+              <select name="MaritalStatus">
+                {% for m in marital %}<option>{{ m }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="field-group">
+              <label>Education Level (1–5)</label>
+              <input type="range" name="Education" min="1" max="5" value="3"
+                     oninput="document.getElementById('edu_val').textContent=this.value">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="field-hint">1=Below College · 5=Doctor</span>
+                <span class="range-val" id="edu_val">3</span>
+              </div>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label>Education Field</label>
+              <select name="EducationField">
+                {% for ef in edu_fields %}<option>{{ ef }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="field-group">
+              <label>Distance From Home (km)</label>
+              <input type="number" name="DistanceFromHome" value="8" min="1" max="29">
+            </div>
+          </div>
+          <div class="field-row single">
+            <div class="field-group">
+              <label>Business Travel</label>
+              <select name="BusinessTravel">
+                {% for t in travel %}<option>{{ t }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 1: Job Info -->
+        <div class="form-section" data-sec="1">
+          <div class="field-row">
+            <div class="field-group">
+              <label>Department</label>
+              <select name="Department">
+                {% for d in departments %}<option>{{ d }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="field-group">
+              <label>Job Role</label>
+              <select name="JobRole">
+                {% for r in job_roles %}<option>{{ r }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label>Job Level (1–5)</label>
+              <input type="range" name="JobLevel" min="1" max="5" value="2"
+                     oninput="document.getElementById('jl_val').textContent=this.value">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="field-hint">1=Entry · 5=C-Level</span>
+                <span class="range-val" id="jl_val">2</span>
+              </div>
+            </div>
+            <div class="field-group">
+              <label>Job Involvement (1–4)</label>
+              <input type="range" name="JobInvolvement" min="1" max="4" value="3"
+                     oninput="document.getElementById('ji_val').textContent=this.value">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="field-hint">1=Low · 4=Very High</span>
+                <span class="range-val" id="ji_val">3</span>
+              </div>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label>Total Working Years</label>
+              <input type="number" name="TotalWorkingYears" value="8" min="0" max="40">
+            </div>
+            <div class="field-group">
+              <label>Years at Company</label>
+              <input type="number" name="YearsAtCompany" value="5" min="0" max="40">
+            </div>
+          </div>
+          <div class="field-row triple">
+            <div class="field-group">
+              <label>Years in Current Role</label>
+              <input type="number" name="YearsInCurrentRole" value="3" min="0" max="18">
+            </div>
+            <div class="field-group">
+              <label>Years Since Promotion</label>
+              <input type="number" name="YearsSinceLastPromotion" value="1" min="0" max="15">
+            </div>
+            <div class="field-group">
+              <label>Years w/ Manager</label>
+              <input type="number" name="YearsWithCurrManager" value="3" min="0" max="17">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label>Num Companies Worked</label>
+              <input type="number" name="NumCompaniesWorked" value="2" min="0" max="9">
+            </div>
+            <div class="field-group">
+              <label>Overtime</label>
+              <select name="OverTime">
+                <option>No</option><option>Yes</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Compensation -->
+        <div class="form-section" data-sec="2">
+          <div class="field-row">
+            <div class="field-group">
+              <label>Monthly Income ($)</label>
+              <input type="number" name="MonthlyIncome" value="5000" min="1000" max="20000">
+            </div>
+            <div class="field-group">
+              <label>Daily Rate ($)</label>
+              <input type="number" name="DailyRate" value="800" min="100" max="1500">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label>Hourly Rate ($)</label>
+              <input type="number" name="HourlyRate" value="65" min="30" max="100">
+            </div>
+            <div class="field-group">
+              <label>Monthly Rate ($)</label>
+              <input type="number" name="MonthlyRate" value="14000" min="2000" max="27000">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label>% Salary Hike</label>
+              <input type="number" name="PercentSalaryHike" value="14" min="11" max="25">
+            </div>
+            <div class="field-group">
+              <label>Stock Option Level (0–3)</label>
+              <input type="range" name="StockOptionLevel" min="0" max="3" value="1"
+                     oninput="document.getElementById('st_val').textContent=this.value">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="field-hint">0=None · 3=High</span>
+                <span class="range-val" id="st_val">1</span>
+              </div>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label>Performance Rating (3–4)</label>
+              <select name="PerformanceRating">
+                <option value="3">3 – Excellent</option>
+                <option value="4">4 – Outstanding</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label>Training Times Last Year</label>
+              <input type="number" name="TrainingTimesLastYear" value="3" min="0" max="6">
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Satisfaction -->
+        <div class="form-section" data-sec="3">
+          <div class="field-row">
+            <div class="field-group">
+              <label>Job Satisfaction (1–4)</label>
+              <input type="range" name="JobSatisfaction" min="1" max="4" value="3"
+                     oninput="document.getElementById('js_val').textContent=this.value">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="field-hint">1=Low · 4=Very High</span>
+                <span class="range-val" id="js_val">3</span>
+              </div>
+            </div>
+            <div class="field-group">
+              <label>Work-Life Balance (1–4)</label>
+              <input type="range" name="WorkLifeBalance" min="1" max="4" value="3"
+                     oninput="document.getElementById('wl_val').textContent=this.value">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="field-hint">1=Bad · 4=Best</span>
+                <span class="range-val" id="wl_val">3</span>
+              </div>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label>Environment Satisfaction (1–4)</label>
+              <input type="range" name="EnvironmentSatisfaction" min="1" max="4" value="3"
+                     oninput="document.getElementById('es_val').textContent=this.value">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="field-hint">1=Low · 4=Very High</span>
+                <span class="range-val" id="es_val">3</span>
+              </div>
+            </div>
+            <div class="field-group">
+              <label>Relationship Satisfaction (1–4)</label>
+              <input type="range" name="RelationshipSatisfaction" min="1" max="4" value="3"
+                     oninput="document.getElementById('rs_val').textContent=this.value">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="field-hint">1=Low · 4=Very High</span>
+                <span class="range-val" id="rs_val">3</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nav -->
+        <div class="form-nav">
+          <div>
+            <button type="button" class="btn btn-outline" id="prevBtn" onclick="changeSection(-1)" style="display:none;">← Back</button>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:.5rem;">
+            <div class="step-dots" id="stepDots">
+              <div class="step-dot active"></div>
+              <div class="step-dot"></div>
+              <div class="step-dot"></div>
+              <div class="step-dot"></div>
+            </div>
+            <span class="step-indicator" id="stepTxt">Step 1 of 4</span>
+          </div>
+          <div>
+            <button type="button" class="btn btn-primary" id="nextBtn" onclick="changeSection(1)">Next →</button>
+            <button type="submit" class="btn btn-primary" id="submitBtn" style="display:none;background:linear-gradient(135deg,#e8ff47,#47c8ff);">
+              🔍 Predict Now
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- RIGHT: Result Panel -->
+    <div class="result-panel">
+      <div class="card" id="resultCard">
+
+        <!-- Idle state -->
+        <div id="idleState" class="idle-state">
+          <div class="idle-icon">🧠</div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:.4rem;">Awaiting Prediction</div>
+          <div style="font-size:.85rem;color:var(--muted);">Complete the form and click<br>"Predict Now" to see results.</div>
+        </div>
+
+        <!-- Loading state -->
+        <div id="loadingState" style="display:none;text-align:center;padding:2rem;">
+          <div class="loading-ring"></div>
+          <div style="color:var(--muted);font-size:.9rem;">Running model…</div>
+        </div>
+
+        <!-- Result state -->
+        <div id="resultState" style="display:none;">
+          <div class="section-title">Prediction Result</div>
+
+          <!-- Gauge -->
+          <div class="gauge-wrap">
+            <canvas id="gaugeCanvas" width="200" height="110"></canvas>
+            <div class="gauge-val">
+              <div class="big" id="gaugeVal">—</div>
+              <div class="lbl">attrition risk</div>
+            </div>
+          </div>
+
+          <div style="text-align:center;margin:1rem 0;">
+            <div id="verdictBadge" class="verdict-badge">—</div>
+          </div>
+
+          <!-- Probability bars -->
+          <div style="margin:1.25rem 0;">
+            <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:.4rem;">
+              <span style="color:#47ffa0;">✓ Stay</span>
+              <span id="stayPct" style="color:#47ffa0;font-weight:600;">—</span>
+            </div>
+            <div style="height:8px;background:rgba(255,255,255,0.07);border-radius:99px;overflow:hidden;">
+              <div id="stayBar" style="height:100%;background:#47ffa0;border-radius:99px;transition:width 1s;width:0%"></div>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;font-size:.82rem;margin:.75rem 0 .4rem;">
+              <span style="color:#ff6b6b;">✗ Leave</span>
+              <span id="leavePct" style="color:#ff6b6b;font-weight:600;">—</span>
+            </div>
+            <div style="height:8px;background:rgba(255,255,255,0.07);border-radius:99px;overflow:hidden;">
+              <div id="leaveBar" style="height:100%;background:#ff6b6b;border-radius:99px;transition:width 1s;width:0%"></div>
+            </div>
+          </div>
+
+          <!-- Risk factors -->
+          <div id="riskFactorsWrap" style="margin-top:1.25rem; display:none;">
+            <div style="font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.5rem;">⚠ Risk Factors Detected</div>
+            <div id="riskFactorTags"></div>
+          </div>
+
+          <div style="margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--border);">
+            <button class="btn btn-outline" style="width:100%;" onclick="resetForm()">↺ New Prediction</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let currentSec = 0;
+const totalSec = 4;
+
+function changeSection(dir) {
+  const sections = document.querySelectorAll('.form-section');
+  sections[currentSec].classList.remove('active');
+  document.querySelectorAll('.tab-btn')[currentSec].classList.remove('active');
+  currentSec += dir;
+  sections[currentSec].classList.add('active');
+  document.querySelectorAll('.tab-btn')[currentSec].classList.add('active');
+  updateNav();
+}
+
+document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.form-section')[currentSec].classList.remove('active');
+    document.querySelectorAll('.tab-btn')[currentSec].classList.remove('active');
+    currentSec = i;
+    document.querySelectorAll('.form-section')[currentSec].classList.add('active');
+    document.querySelectorAll('.tab-btn')[currentSec].classList.add('active');
+    updateNav();
+  });
+});
+
+function updateNav() {
+  document.getElementById('prevBtn').style.display   = currentSec > 0 ? '' : 'none';
+  document.getElementById('nextBtn').style.display   = currentSec < totalSec-1 ? '' : 'none';
+  document.getElementById('submitBtn').style.display = currentSec === totalSec-1 ? '' : 'none';
+  document.getElementById('stepTxt').textContent = `Step ${currentSec+1} of ${totalSec}`;
+  document.querySelectorAll('.step-dot').forEach((d,i) => {
+    d.className = 'step-dot' + (i < currentSec ? ' done' : (i === currentSec ? ' active' : ''));
+  });
+}
+
+// ── Gauge drawing ────────────────────────────────────────────────────────────
+function drawGauge(pct, color) {
+  const canvas = document.getElementById('gaugeCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = 200, H = 110, cx = W/2, cy = H - 10;
+  const R = 85;
+  ctx.clearRect(0, 0, W, H);
+
+  // Track
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, Math.PI, 0, false);
+  ctx.lineWidth = 14; ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineCap = 'round'; ctx.stroke();
+
+  // Fill
+  const angle = Math.PI + (pct / 100) * Math.PI;
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, Math.PI, angle, false);
+  ctx.lineWidth = 14; ctx.strokeStyle = color;
+  ctx.lineCap = 'round'; ctx.stroke();
+}
+
+// ── Submit ───────────────────────────────────────────────────────────────────
+document.getElementById('predictForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  document.getElementById('idleState').style.display    = 'none';
+  document.getElementById('loadingState').style.display = 'block';
+  document.getElementById('resultState').style.display  = 'none';
+
+  const data = new FormData(e.target);
+
+  const resp = await fetch('/predict/api/', { method:'POST', body:data });
+  const res  = await resp.json();
+
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('resultState').style.display  = 'block';
+
+  const lp = res.leave_probability;
+  const sp = res.stay_probability;
+
+  // Color by risk
+  let color, badgeCls, badgeTxt;
+  if (res.risk_level === 'HIGH')   { color='#ff6b6b'; badgeCls='badge-high';   badgeTxt='🔴 HIGH RISK — Likely to Leave'; }
+  else if (res.risk_level==='MEDIUM'){ color='#ffbd47'; badgeCls='badge-medium'; badgeTxt='🟡 MEDIUM RISK — Monitor Closely'; }
+  else                               { color='#47ffa0'; badgeCls='badge-low';    badgeTxt='🟢 LOW RISK — Likely to Stay'; }
+
+  document.getElementById('gaugeVal').textContent = lp.toFixed(1) + '%';
+  document.getElementById('gaugeVal').style.color = color;
+  drawGauge(lp, color);
+
+  const badge = document.getElementById('verdictBadge');
+  badge.textContent = badgeTxt;
+  badge.className = 'verdict-badge ' + badgeCls;
+
+  document.getElementById('stayPct').textContent  = sp.toFixed(1) + '%';
+  document.getElementById('leavePct').textContent = lp.toFixed(1) + '%';
+  setTimeout(() => {
+    document.getElementById('stayBar').style.width  = sp + '%';
+    document.getElementById('leaveBar').style.width = lp + '%';
+  }, 50);
+
+  const rfw = document.getElementById('riskFactorsWrap');
+  if (res.risk_factors && res.risk_factors.length > 0) {
+    rfw.style.display = 'block';
+    document.getElementById('riskFactorTags').innerHTML =
+      res.risk_factors.map(f => `<span class="risk-factor-tag">${f}</span>`).join('');
+  } else {
+    rfw.style.display = 'none';
+  }
+});
+
+function resetForm() {
+  document.getElementById('idleState').style.display    = 'block';
+  document.getElementById('resultState').style.display  = 'none';
+  document.getElementById('stayBar').style.width  = '0%';
+  document.getElementById('leaveBar').style.width = '0%';
+}
+
+updateNav();
+</script>
+{% endblock %}
