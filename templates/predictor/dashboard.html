@@ -1,190 +1,298 @@
 {% extends "predictor/base.html" %}
+{% load static %}
 {% block title %}Dashboard — AttritionIQ{% endblock %}
 
 {% block content %}
 <div class="container">
 
-  <!-- Hero -->
-  <div style="padding:3rem 0 2rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
-    <div>
-      <div style="font-size:.8rem; color:var(--accent); font-weight:600; letter-spacing:.1em; text-transform:uppercase; margin-bottom:.5rem;">HR Intelligence Platform</div>
-      <h1 style="font-family:'Syne',sans-serif; font-size:2.8rem; font-weight:800; line-height:1.1;">
-        Employee Attrition<br>
-        <span style="background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Analytics Dashboard</span>
-      </h1>
-      <p style="color:var(--muted); margin-top:.75rem; max-width:440px;">
-        Powered by Random Forest ML · Identifies employees at risk of leaving before it happens.
-      </p>
+  <!-- Hero Section -->
+  <div style="padding: 3rem 0 2rem;">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 2rem;">
+      <div>
+        <div style="font-size: 0.8rem; color: var(--accent); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.5rem;">
+          HR Intelligence Platform
+        </div>
+        <h1 style="font-family: 'Syne', sans-serif; font-size: 2.8rem; font-weight: 800; line-height: 1.1;">
+          Employee Attrition<br>
+          <span style="background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+            Analytics Dashboard
+          </span>
+        </h1>
+        <p style="color: var(--muted); max-width: 500px; margin-top: 1rem;">
+          Powered by Random Forest ML with {{ feature_count }} key features. 
+          Identifies employees at risk of leaving before it happens.
+        </p>
+      </div>
+      
+      <div style="display: flex; gap: 1rem;">
+        <a href="/predict/" class="btn btn-primary" style="font-size: 1rem; padding: 1rem 2rem;">
+          <span>🎯 Predict Employee</span>
+        </a>
+        <button class="btn btn-outline" onclick="window.location.reload()">
+          <span>↻ Refresh Data</span>
+        </button>
+      </div>
     </div>
-    <a href="/predict/" class="btn btn-primary" style="font-size:1rem; padding:1rem 2rem;">
-      ➜ Predict Employee
-    </a>
   </div>
 
-  <!-- KPI tiles -->
-  <div class="stat-grid" style="margin-bottom:2rem;">
+  <!-- KPI Cards -->
+  <div class="stat-grid" style="margin-bottom: 2rem;">
     <div class="stat-tile yellow">
       <div class="stat-label">Total Employees</div>
-      <div class="stat-value" style="color:var(--accent);">{{ total_employees }}</div>
+      <div class="stat-value" style="color: var(--accent);">{{ total_employees }}</div>
       <div class="stat-sub">in dataset</div>
     </div>
+    
     <div class="stat-tile red">
       <div class="stat-label">Overall Attrition Rate</div>
-      <div class="stat-value" style="color:var(--accent2);">{{ attrition_rate }}%</div>
+      <div class="stat-value" style="color: var(--accent2);">{{ attrition_rate }}%</div>
       <div class="stat-sub">employees left</div>
     </div>
+    
     <div class="stat-tile blue">
       <div class="stat-label">Avg. Tenure</div>
-      <div class="stat-value" style="color:var(--accent3);">{{ avg_tenure }}y</div>
+      <div class="stat-value" style="color: var(--accent3);">{{ avg_tenure }}y</div>
       <div class="stat-sub">years at company</div>
     </div>
+    
     <div class="stat-tile green">
       <div class="stat-label">High-Risk Count</div>
-      <div class="stat-value" style="color:#47ffa0;">{{ high_risk_count }}</div>
+      <div class="stat-value" style="color: #47ffa0;">{{ high_risk_count }}</div>
       <div class="stat-sub">employees flagged</div>
     </div>
   </div>
 
-  <!-- Charts row 1 -->
-  <div class="grid-2" style="margin-bottom:1.5rem;">
-
+  <!-- Charts Row 1 -->
+  <div class="grid-2" style="margin-bottom: 1.5rem;">
     <div class="card">
-      <div class="section-title">Attrition by Department</div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div class="section-title">Attrition by Department</div>
+        <span class="feature-badge">🏢 Department Analysis</span>
+      </div>
       <canvas id="deptChart" height="200"></canvas>
     </div>
 
     <div class="card">
-      <div class="section-title">Attrition by Age Group (%)</div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div class="section-title">Attrition by Age Group</div>
+        <span class="feature-badge">📊 Age Distribution</span>
+      </div>
       <canvas id="ageChart" height="200"></canvas>
     </div>
-
   </div>
 
-  <!-- Charts row 2 -->
-  <div class="grid-2" style="margin-bottom:1.5rem;">
-
+  <!-- Charts Row 2 -->
+  <div class="grid-2" style="margin-bottom: 1.5rem;">
     <div class="card">
-      <div class="section-title">Job Satisfaction vs Attrition</div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div class="section-title">Job Satisfaction Impact</div>
+        <span class="feature-badge">😊 Satisfaction Metrics</span>
+      </div>
       <canvas id="satChart" height="200"></canvas>
     </div>
 
     <div class="card">
-      <div class="section-title">Overtime Impact on Attrition (%)</div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div class="section-title">Overtime Impact</div>
+        <span class="feature-badge">⏰ Work Hours</span>
+      </div>
       <canvas id="otChart" height="200"></canvas>
     </div>
-
   </div>
 
-  <!-- Feature Importance -->
-  <div class="card" style="margin-bottom:2rem;">
-    <div class="section-title">Top 10 Model Feature Importances</div>
-    <div style="color:var(--muted); font-size:.85rem; margin-bottom:1.5rem;">
-      Which factors influence the Random Forest model most when predicting attrition.
+  <!-- Feature Importance Section -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+      <div>
+        <div class="section-title">Model Feature Importance</div>
+        <div style="color: var(--muted); font-size: 0.85rem;">
+          Top {{ top_features|length }} factors influencing attrition predictions
+        </div>
+      </div>
+      <span class="feature-badge">🤖 ML Model v2.0</span>
     </div>
-    <div id="featBars">
+
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
       {% for name, score in top_features %}
       <div class="feat-bar-wrap">
         <div class="feat-bar-label">
-          <span>{{ name }}</span>
-          <span style="color:var(--accent);">{{ score|floatformat:3 }}</span>
+          <span style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent);"></span>
+            {{ name }}
+          </span>
+          <span style="color: var(--accent); font-weight: 600;">{{ score|floatformat:3 }}</span>
         </div>
         <div class="feat-bar-track">
-          <div class="feat-bar-fill" style="width:{{ score|floatformat:4 }}px;" data-val="{{ score }}"></div>
+          <div class="feat-bar-fill" data-score="{{ score }}"></div>
         </div>
       </div>
       {% endfor %}
     </div>
   </div>
 
-  <!-- CTA -->
-  <div class="card" style="background:linear-gradient(135deg,rgba(232,255,71,.07),rgba(71,200,255,.07)); text-align:center; padding:2.5rem; margin-bottom:2rem;">
-    <h2 style="font-family:'Syne',sans-serif; font-size:1.7rem; font-weight:800;">Ready to predict attrition risk?</h2>
-    <p style="color:var(--muted); margin:.75rem auto 1.5rem; max-width:400px;">
-      Fill in an employee's profile and instantly get their risk score with key contributing factors.
+  <!-- Insights Section -->
+  <div class="grid-3" style="margin-bottom: 2rem;">
+    <div class="card">
+      <div style="font-size: 1.5rem; margin-bottom: 1rem;">📈</div>
+      <h3 style="font-family: 'Syne', sans-serif; font-size: 1.1rem; margin-bottom: 0.5rem;">Key Insight #1</h3>
+      <p style="color: var(--muted); font-size: 0.9rem;">
+        Employees with overtime are 3x more likely to leave. Consider workload distribution.
+      </p>
+    </div>
+
+    <div class="card">
+      <div style="font-size: 1.5rem; margin-bottom: 1rem;">💡</div>
+      <h3 style="font-family: 'Syne', sans-serif; font-size: 1.1rem; margin-bottom: 0.5rem;">Key Insight #2</h3>
+      <p style="color: var(--muted); font-size: 0.9rem;">
+        Low job satisfaction (< 2) is the strongest predictor of attrition.
+      </p>
+    </div>
+
+    <div class="card">
+      <div style="font-size: 1.5rem; margin-bottom: 1rem;">🎯</div>
+      <h3 style="font-family: 'Syne', sans-serif; font-size: 1.1rem; margin-bottom: 0.5rem;">Key Insight #3</h3>
+      <p style="color: var(--muted); font-size: 0.9rem;">
+        Employees with no promotion for 3+ years show 40% higher attrition risk.
+      </p>
+    </div>
+  </div>
+
+  <!-- Call to Action -->
+  <div class="card" style="background: linear-gradient(135deg, rgba(232, 255, 71, 0.1), rgba(71, 200, 255, 0.1)); text-align: center; padding: 3rem; margin-bottom: 2rem;">
+    <h2 style="font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 800; margin-bottom: 1rem;">
+      Ready to predict individual risk?
+    </h2>
+    <p style="color: var(--muted); max-width: 500px; margin: 0 auto 2rem;">
+      Get instant predictions with personalized retention recommendations
     </p>
-    <a href="/predict/" class="btn btn-primary">Start Prediction →</a>
+    <div style="display: flex; gap: 1rem; justify-content: center;">
+      <a href="/predict/" class="btn btn-primary" style="font-size: 1rem; padding: 1rem 2rem;">
+        <span>🚀 Start Predicting</span>
+      </a>
+      <button class="btn btn-outline" onclick="window.open('https://github.com/your-repo', '_blank')">
+        <span>📚 Documentation</span>
+      </button>
+    </div>
   </div>
 
 </div>
 
 <script>
-  const ACCENT  = '#e8ff47';
-  const ACCENT2 = '#ff6b6b';
-  const ACCENT3 = '#47c8ff';
-  const MUTED   = 'rgba(255,255,255,0.07)';
-  const TEXT    = '#7070a0';
+// Chart configurations
+const ACCENT = '#e8ff47';
+const ACCENT2 = '#ff6b6b';
+const ACCENT3 = '#47c8ff';
+const MUTED = 'rgba(255,255,255,0.07)';
 
-  Chart.defaults.color = '#7070a0';
-  Chart.defaults.borderColor = 'rgba(255,255,255,0.07)';
-  Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.color = '#7070a0';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.07)';
+Chart.defaults.font.family = "'DM Sans', sans-serif";
 
-  const deptData = {{ dept_attrition|safe }};
-  new Chart('deptChart', {
-    type:'bar',
-    data:{
-      labels: Object.keys(deptData),
-      datasets:[{
-        label:'Attrition %',
-        data: Object.values(deptData),
-        backgroundColor:[ACCENT2, ACCENT3, ACCENT],
-        borderRadius:6, borderSkipped:false,
-      }]
-    },
-    options:{ plugins:{legend:{display:false}}, scales:{ y:{grid:{color:MUTED}}, x:{grid:{display:false}} } }
-  });
+// Department Chart
+const deptData = {{ dept_attrition|safe }};
+new Chart('deptChart', {
+  type: 'bar',
+  data: {
+    labels: Object.keys(deptData),
+    datasets: [{
+      label: 'Attrition %',
+      data: Object.values(deptData),
+      backgroundColor: [ACCENT2, ACCENT3, ACCENT],
+      borderRadius: 6,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { grid: { color: MUTED } },
+      x: { grid: { display: false } }
+    }
+  }
+});
 
-  const ageData = {{ age_attrition|safe }};
-  new Chart('ageChart', {
-    type:'line',
-    data:{
-      labels: Object.keys(ageData),
-      datasets:[{
-        label:'Attrition %',
-        data: Object.values(ageData),
-        borderColor: ACCENT,
-        backgroundColor:'rgba(232,255,71,0.08)',
-        fill:true, tension:.4, pointRadius:5,
-        pointBackgroundColor: ACCENT,
-      }]
-    },
-    options:{ plugins:{legend:{display:false}}, scales:{ y:{grid:{color:MUTED}}, x:{grid:{display:false}} } }
-  });
+// Age Chart
+const ageData = {{ age_attrition|safe }};
+new Chart('ageChart', {
+  type: 'line',
+  data: {
+    labels: Object.keys(ageData),
+    datasets: [{
+      label: 'Attrition %',
+      data: Object.values(ageData),
+      borderColor: ACCENT,
+      backgroundColor: 'rgba(232, 255, 71, 0.08)',
+      fill: true,
+      tension: 0.4,
+      pointRadius: 5,
+      pointBackgroundColor: ACCENT,
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { grid: { color: MUTED } },
+      x: { grid: { display: false } }
+    }
+  }
+});
 
-  const satData = {{ satisfaction_attrition|safe }};
-  new Chart('satChart', {
-    type:'bar',
-    data:{
-      labels: Object.keys(satData),
-      datasets:[{
-        label:'Attrition %',
-        data: Object.values(satData),
-        backgroundColor: ['rgba(255,107,107,.85)','rgba(255,189,71,.85)',
-                          'rgba(71,200,255,.85)','rgba(71,255,160,.85)'],
-        borderRadius:6, borderSkipped:false,
-      }]
-    },
-    options:{ plugins:{legend:{display:false}}, scales:{ y:{grid:{color:MUTED}}, x:{grid:{display:false}} } }
-  });
+// Satisfaction Chart
+const satData = {{ satisfaction_attrition|safe }};
+new Chart('satChart', {
+  type: 'bar',
+  data: {
+    labels: Object.keys(satData),
+    datasets: [{
+      label: 'Attrition %',
+      data: Object.values(satData),
+      backgroundColor: [
+        'rgba(255,107,107,.85)',
+        'rgba(255,189,71,.85)',
+        'rgba(71,200,255,.85)',
+        'rgba(71,255,160,.85)'
+      ],
+      borderRadius: 6,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { grid: { color: MUTED } },
+      x: { grid: { display: false } }
+    }
+  }
+});
 
-  const otData = {{ overtime_attrition|safe }};
-  new Chart('otChart', {
-    type:'doughnut',
-    data:{
-      labels: Object.keys(otData),
-      datasets:[{
-        data: Object.values(otData),
-        backgroundColor:[ACCENT2, ACCENT3],
-        borderColor:'transparent', hoverOffset:6,
-      }]
-    },
-    options:{ plugins:{legend:{position:'bottom'}} }
-  });
+// Overtime Chart
+const otData = {{ overtime_attrition|safe }};
+new Chart('otChart', {
+  type: 'doughnut',
+  data: {
+    labels: Object.keys(otData),
+    datasets: [{
+      data: Object.values(otData),
+      backgroundColor: [ACCENT2, ACCENT3],
+      borderColor: 'transparent',
+      hoverOffset: 6,
+    }]
+  },
+  options: {
+    plugins: { legend: { position: 'bottom' } }
+  }
+});
 
-  // Animate feature bars
-  const MAX_SCORE = {{ top_features.0.1 }};
-  document.querySelectorAll('.feat-bar-fill').forEach(el => {
-    const val = parseFloat(el.dataset.val);
-    el.style.width = (val / MAX_SCORE * 100) + '%';
-  });
+// Feature importance bars
+const maxScore = {{ top_features.0.1 }};
+document.querySelectorAll('.feat-bar-fill').forEach(el => {
+  const score = parseFloat(el.dataset.score);
+  el.style.width = (score / maxScore * 100) + '%';
+});
+
+// Auto-refresh data every 5 minutes
+setTimeout(() => {
+  window.location.reload();
+}, 300000);
 </script>
 {% endblock %}

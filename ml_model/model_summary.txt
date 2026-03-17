@@ -1,0 +1,22 @@
+Employee Attrition Predictor - Model Summary
+==================================================
+
+Training Date: 2026-03-17 21:33:40
+Dataset Shape: (1470, 37)
+Attrition Distribution: {0: 1040, 1: 430}
+
+Model Type: Random Forest Classifier
+Number of Features: 15
+Accuracy: 71.09%
+
+Top 10 Features:
+  OverTime_Impact: 0.0947
+  OverTime: 0.0900
+  DailyRate: 0.0779
+  MonthlyIncome: 0.0688
+  DistanceFromHome: 0.0688
+  MonthlyRate: 0.0677
+  IncomePerYear: 0.0670
+  HourlyRate: 0.0627
+  SatisfactionScore: 0.0625
+  Age: 0.0622
