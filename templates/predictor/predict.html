@@ -579,7 +579,7 @@
     
     <!-- Left: Form Sections -->
     <div>
-      <form id="predictForm" method="POST" action="/predict/api/">
+      <form id="predictForm">
         {% csrf_token %}
         
         <!-- Section 1: Personal Info -->
@@ -596,9 +596,6 @@
             <div class="form-group">
               <label class="form-label">
                 <i>📅</i> Age
-                <span class="tooltip">❓
-                  <span class="tooltip-text">Employee's age in years (18-65)</span>
-                </span>
               </label>
               <input type="number" name="Age" class="form-control" value="32" min="18" max="65" required>
             </div>
@@ -747,21 +744,21 @@
             
             <div class="form-group">
               <label class="form-label">
-                <i>📈</i> Years Since Promotion
+                <i>📈</i> Years Since Last Promotion
               </label>
               <input type="number" name="YearsSinceLastPromotion" class="form-control" value="1" min="0" max="15">
             </div>
             
             <div class="form-group">
               <label class="form-label">
-                <i>👥</i> Years with Current Manager
+                <i>👥</i> Years With Current Manager
               </label>
               <input type="number" name="YearsWithCurrManager" class="form-control" value="3" min="0" max="17">
             </div>
             
             <div class="form-group">
               <label class="form-label">
-                <i>🏢</i> Num Companies Worked
+                <i>🏢</i> Number of Companies Worked
               </label>
               <input type="number" name="NumCompaniesWorked" class="form-control" value="2" min="0" max="9">
             </div>
@@ -783,8 +780,8 @@
           <div class="section-header">
             <div class="section-icon">💰</div>
             <div>
-              <div class="section-title">Compensation</div>
-              <div class="section-subtitle">Salary and benefits</div>
+              <div class="section-title">Compensation & Performance</div>
+              <div class="section-subtitle">Salary, rates, and performance metrics</div>
             </div>
           </div>
           
@@ -860,7 +857,7 @@
             <div class="section-icon">😊</div>
             <div>
               <div class="section-title">Satisfaction Metrics</div>
-              <div class="section-subtitle">Employee satisfaction scores</div>
+              <div class="section-subtitle">Employee satisfaction scores (1-4)</div>
             </div>
           </div>
           
@@ -913,9 +910,15 @@
 
         <!-- Navigation Buttons -->
         <div class="nav-buttons">
-          <button type="button" class="btn-nav btn-prev" id="prevBtn">← Previous</button>
-          <button type="button" class="btn-nav btn-next" id="nextBtn">Next →</button>
-          <button type="submit" class="btn-nav btn-next" id="submitBtn" style="display: none;">🔮 Predict Now</button>
+          <button type="button" class="btn-nav btn-prev" id="prevBtn">
+            ← Previous
+          </button>
+          <button type="button" class="btn-nav btn-next" id="nextBtn">
+            Next →
+          </button>
+          <button type="submit" class="btn-nav btn-next" id="submitBtn" style="display: none;">
+            🔮 Predict Now
+          </button>
         </div>
       </form>
     </div>
@@ -1013,100 +1016,91 @@
         </div>
 
         <!-- Reset Button -->
-        <button class="btn-nav btn-prev" style="width: 100%; margin-top: 1rem;" onclick="resetPrediction()">↻ New Prediction</button>
+        <button class="btn-nav btn-prev" style="width: 100%; margin-top: 1rem; cursor: pointer;" onclick="resetPrediction()">
+          ↻ New Prediction
+        </button>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-// ========== CSRF TOKEN HANDLER ==========
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-const csrftoken = getCookie('csrftoken');
-
-// ========== SECTION NAVIGATION ==========
+// Section navigation
 let currentSection = 1;
 const totalSections = 4;
 
 function updateNavigation() {
+  // Update step indicators
   document.querySelectorAll('.step-item').forEach((item, index) => {
     const stepNum = index + 1;
     item.classList.toggle('active', stepNum === currentSection);
     item.classList.toggle('completed', stepNum < currentSection);
   });
 
+  // Show/hide sections
   document.querySelectorAll('.form-section-card').forEach(section => {
     const sectionNum = parseInt(section.dataset.section);
     section.classList.toggle('active', sectionNum === currentSection);
   });
 
+  // Update buttons
   const prevBtn = document.getElementById('prevBtn');
   const nextBtn = document.getElementById('nextBtn');
   const submitBtn = document.getElementById('submitBtn');
+  
   if (prevBtn) prevBtn.style.display = currentSection > 1 ? 'inline-flex' : 'none';
   if (nextBtn) nextBtn.style.display = currentSection < totalSections ? 'inline-flex' : 'none';
   if (submitBtn) submitBtn.style.display = currentSection === totalSections ? 'inline-flex' : 'none';
 }
 
-document.getElementById('prevBtn').addEventListener('click', () => {
-  if (currentSection > 1) {
-    currentSection--;
-    updateNavigation();
-  }
-});
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
 
-document.getElementById('nextBtn').addEventListener('click', () => {
-  if (currentSection < totalSections) {
-    currentSection++;
-    updateNavigation();
-  }
-});
+if (prevBtn) {
+  prevBtn.addEventListener('click', () => {
+    if (currentSection > 1) {
+      currentSection--;
+      updateNavigation();
+    }
+  });
+}
 
-// ========== FORM SUBMISSION ==========
-const form = document.getElementById('predictForm');
-if (form) {
-  form.addEventListener('submit', async (e) => {
+if (nextBtn) {
+  nextBtn.addEventListener('click', () => {
+    if (currentSection < totalSections) {
+      currentSection++;
+      updateNavigation();
+    }
+  });
+}
+
+// Form submission
+const predictForm = document.getElementById('predictForm');
+if (predictForm) {
+  predictForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     // Show loading state
-    document.getElementById('idleState').style.display = 'none';
-    document.getElementById('resultState').style.display = 'none';
-    document.getElementById('loadingState').style.display = 'block';
+    const idleState = document.getElementById('idleState');
+    const resultState = document.getElementById('resultState');
+    const loadingState = document.getElementById('loadingState');
     const resultBadge = document.getElementById('resultBadge');
+    
+    if (idleState) idleState.style.display = 'none';
+    if (resultState) resultState.style.display = 'none';
+    if (loadingState) loadingState.style.display = 'block';
     if (resultBadge) {
       resultBadge.textContent = 'Analyzing...';
       resultBadge.className = 'result-badge';
     }
 
-    const formData = new FormData(form);
+    const formData = new FormData(e.target);
 
     try {
       const response = await fetch('/predict/api/', {
         method: 'POST',
-        headers: {
-          'X-CSRFToken': csrftoken,
-        },
-        body: formData,
-        credentials: 'same-origin',
+        body: formData
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Server error (${response.status}): ${errorText.substring(0, 100)}`);
-      }
 
       const data = await response.json();
 
@@ -1116,33 +1110,37 @@ if (form) {
         throw new Error(data.error || 'Prediction failed');
       }
     } catch (error) {
-      console.error('Prediction error:', error);
       alert('Error: ' + error.message);
       resetPrediction();
     }
   });
-} else {
-  console.error('Form with id "predictForm" not found');
 }
 
-// ========== RESULT DISPLAY FUNCTIONS ==========
 function displayResults(data) {
-  document.getElementById('loadingState').style.display = 'none';
-  document.getElementById('resultState').style.display = 'block';
+  const loadingState = document.getElementById('loadingState');
+  const resultState = document.getElementById('resultState');
+  
+  if (loadingState) loadingState.style.display = 'none';
+  if (resultState) resultState.style.display = 'block';
 
-  // Gauge
+  // Update gauge
   const gaugeCanvas = document.getElementById('gaugeCanvas');
   if (gaugeCanvas) {
     const ctx = gaugeCanvas.getContext('2d');
-    drawGauge(ctx, data.leave_probability);
+    const lp = data.leave_probability;
+    drawGauge(ctx, lp);
   }
 
-  // Numbers
-  document.getElementById('gaugeNumber').textContent = data.leave_probability.toFixed(1) + '%';
-  document.getElementById('stayProb').textContent = data.stay_probability.toFixed(1) + '%';
-  document.getElementById('leaveProb').textContent = data.leave_probability.toFixed(1) + '%';
+  // Update numbers
+  const gaugeNumber = document.getElementById('gaugeNumber');
+  const stayProb = document.getElementById('stayProb');
+  const leaveProb = document.getElementById('leaveProb');
   
-  // Bars
+  if (gaugeNumber) gaugeNumber.textContent = data.leave_probability.toFixed(1) + '%';
+  if (stayProb) stayProb.textContent = data.stay_probability.toFixed(1) + '%';
+  if (leaveProb) leaveProb.textContent = data.leave_probability.toFixed(1) + '%';
+  
+  // Update bars
   setTimeout(() => {
     const stayBar = document.getElementById('stayBar');
     const leaveBar = document.getElementById('leaveBar');
@@ -1150,60 +1148,68 @@ function displayResults(data) {
     if (leaveBar) leaveBar.style.width = data.leave_probability + '%';
   }, 100);
 
-  // Badge
-  const badge = document.getElementById('resultBadge');
-  if (badge) {
-    badge.textContent = data.risk_level + ' RISK';
-    badge.className = 'result-badge badge-' + data.risk_level.toLowerCase();
+  // Update badge
+  const resultBadge = document.getElementById('resultBadge');
+  if (resultBadge) {
+    resultBadge.textContent = data.risk_level + ' RISK';
+    resultBadge.className = 'result-badge badge-' + data.risk_level.toLowerCase();
   }
 
-  // Risk Factors
-  const riskFactorsDiv = document.getElementById('riskFactors');
-  const riskTagsDiv = document.getElementById('riskTags');
-  if (data.risk_factors && data.risk_factors.length > 0) {
-    if (riskFactorsDiv) riskFactorsDiv.style.display = 'block';
-    if (riskTagsDiv) {
-      riskTagsDiv.innerHTML = data.risk_factors.map(f => `<span class="factor-tag">⚠️ ${f}</span>`).join('');
+  // Update risk factors
+  const riskFactors = document.getElementById('riskFactors');
+  const riskTags = document.getElementById('riskTags');
+  
+  if (riskFactors && riskTags) {
+    if (data.risk_factors && data.risk_factors.length > 0) {
+      riskFactors.style.display = 'block';
+      riskTags.innerHTML = data.risk_factors
+        .map(f => `<span class="factor-tag">⚠️ ${f}</span>`)
+        .join('');
+    } else {
+      riskFactors.style.display = 'none';
     }
-  } else {
-    if (riskFactorsDiv) riskFactorsDiv.style.display = 'none';
   }
 
-  // Recommendations
-  const recDiv = document.getElementById('recommendations');
-  const recListDiv = document.getElementById('recList');
-  if (data.recommendations && data.recommendations.length > 0) {
-    if (recDiv) recDiv.style.display = 'block';
-    if (recListDiv) {
-      recListDiv.innerHTML = data.recommendations.map(rec => `
-        <div class="recommendation-item">
-          <span class="recommendation-icon">💡</span> ${rec}
-        </div>
-      `).join('');
+  // Update recommendations
+  const recommendationsDiv = document.getElementById('recommendations');
+  const recList = document.getElementById('recList');
+  
+  if (recommendationsDiv && recList) {
+    if (data.recommendations && data.recommendations.length > 0) {
+      recommendationsDiv.style.display = 'block';
+      recList.innerHTML = data.recommendations
+        .map(rec => `<div class="recommendation-item">
+          <span class="recommendation-icon">💡</span>
+          ${rec}
+        </div>`)
+        .join('');
+    } else {
+      recommendationsDiv.style.display = 'none';
     }
-  } else {
-    if (recDiv) recDiv.style.display = 'none';
   }
 
-  // Confidence
-  const confSpan = document.getElementById('modelConfidence');
-  if (confSpan) confSpan.textContent = data.model_confidence.toFixed(1) + '%';
+  // Update confidence
+  const modelConfidence = document.getElementById('modelConfidence');
+  if (modelConfidence) {
+    modelConfidence.textContent = data.model_confidence.toFixed(1) + '%';
+  }
 }
 
 function drawGauge(ctx, percentage) {
   const width = 200, height = 120;
   ctx.clearRect(0, 0, width, height);
 
-  // Background arc
+  // Draw background arc
   ctx.beginPath();
   ctx.arc(100, 100, 80, Math.PI, 2 * Math.PI);
   ctx.strokeStyle = 'rgba(255,255,255,0.1)';
   ctx.lineWidth = 15;
   ctx.stroke();
 
-  // Percentage arc
+  // Draw percentage arc
   const startAngle = Math.PI;
   const endAngle = Math.PI + (percentage / 100) * Math.PI;
+  
   let color;
   if (percentage < 30) color = '#47ffa0';
   else if (percentage < 60) color = '#ffbd47';
@@ -1214,29 +1220,29 @@ function drawGauge(ctx, percentage) {
   ctx.strokeStyle = color;
   ctx.lineWidth = 15;
   ctx.stroke();
-
-  // Center text
-  ctx.font = 'bold 24px "Syne"';
-  ctx.fillStyle = color;
-  ctx.textAlign = 'center';
-  ctx.fillText(percentage.toFixed(1) + '%', 100, 110);
 }
 
 function resetPrediction() {
-  document.getElementById('idleState').style.display = 'block';
-  document.getElementById('resultState').style.display = 'none';
-  document.getElementById('loadingState').style.display = 'none';
-  const badge = document.getElementById('resultBadge');
-  if (badge) {
-    badge.textContent = 'Ready';
-    badge.className = 'result-badge';
+  const idleState = document.getElementById('idleState');
+  const resultState = document.getElementById('resultState');
+  const loadingState = document.getElementById('loadingState');
+  const resultBadge = document.getElementById('resultBadge');
+  
+  if (idleState) idleState.style.display = 'block';
+  if (resultState) resultState.style.display = 'none';
+  if (loadingState) loadingState.style.display = 'none';
+  if (resultBadge) {
+    resultBadge.textContent = 'Ready';
+    resultBadge.className = 'result-badge';
   }
   
+  // Reset bars
   const stayBar = document.getElementById('stayBar');
   const leaveBar = document.getElementById('leaveBar');
   if (stayBar) stayBar.style.width = '0%';
   if (leaveBar) leaveBar.style.width = '0%';
   
+  // Clear canvas
   const gaugeCanvas = document.getElementById('gaugeCanvas');
   if (gaugeCanvas) {
     const ctx = gaugeCanvas.getContext('2d');
@@ -1248,12 +1254,14 @@ function resetPrediction() {
 updateNavigation();
 resetPrediction();
 
-// Keyboard navigation
+// Add keyboard navigation
 document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight' && currentSection < totalSections) {
-    document.getElementById('nextBtn').click();
+    const nextBtn = document.getElementById('nextBtn');
+    if (nextBtn) nextBtn.click();
   } else if (e.key === 'ArrowLeft' && currentSection > 1) {
-    document.getElementById('prevBtn').click();
+    const prevBtn = document.getElementById('prevBtn');
+    if (prevBtn) prevBtn.click();
   }
 });
 </script>

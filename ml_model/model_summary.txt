@@ -1,22 +1,22 @@
-Employee Attrition Predictor - Model Summary
+Employee Attrition Predictor - Calibrated Decision Tree
 ==================================================
 
-Training Date: 2026-04-02 21:32:19
+Training Date: 2026-04-03 01:32:07
 Dataset Shape: (1470, 37)
 Attrition Distribution: {0: 1040, 1: 430}
-
-Model Type: Random Forest Classifier
+Model Type: DecisionTreeClassifier + CalibratedClassifierCV (sigmoid)
 Number of Features: 15
-Accuracy: 71.09%
+Accuracy: 70.75%
+Probability range on test set: 0.25% - 0.36%
 
 Top 10 Features:
-  OverTime_Impact: 0.0947
-  OverTime: 0.0900
-  DailyRate: 0.0779
-  MonthlyIncome: 0.0688
-  DistanceFromHome: 0.0688
-  MonthlyRate: 0.0677
-  IncomePerYear: 0.0670
-  HourlyRate: 0.0627
-  SatisfactionScore: 0.0625
-  Age: 0.0622
+  OverTime: 0.1867
+  TotalWorkingYears: 0.1260
+  SatisfactionScore: 0.0962
+  MonthlyIncome: 0.0855
+  DistanceFromHome: 0.0810
+  Age: 0.0666
+  NumCompaniesWorked: 0.0644
+  JobInvolvement: 0.0621
+  YearsInCurrentRole: 0.0540
+  YearsAtCompany: 0.0524
