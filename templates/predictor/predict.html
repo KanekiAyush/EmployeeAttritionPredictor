@@ -275,6 +275,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  cursor: pointer;
 }
 
 .btn-prev {
@@ -578,7 +579,7 @@
     
     <!-- Left: Form Sections -->
     <div>
-      <form id="predictForm">
+      <form id="predictForm" method="POST" action="/predict/api/">
         {% csrf_token %}
         
         <!-- Section 1: Personal Info -->
@@ -912,15 +913,9 @@
 
         <!-- Navigation Buttons -->
         <div class="nav-buttons">
-          <button type="button" class="btn-nav btn-prev" id="prevBtn">
-            ← Previous
-          </button>
-          <button type="button" class="btn-nav btn-next" id="nextBtn">
-            Next →
-          </button>
-          <button type="submit" class="btn-nav btn-next" id="submitBtn" style="display: none;">
-            🔮 Predict Now
-          </button>
+          <button type="button" class="btn-nav btn-prev" id="prevBtn">← Previous</button>
+          <button type="button" class="btn-nav btn-next" id="nextBtn">Next →</button>
+          <button type="submit" class="btn-nav btn-next" id="submitBtn" style="display: none;">🔮 Predict Now</button>
         </div>
       </form>
     </div>
@@ -1012,43 +1007,58 @@
         </div>
 
         <!-- Model Confidence -->
-        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: 0.8rem; color: var(--muted;); text-align: center;">
+        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: 0.8rem; color: var(--muted); text-align: center;">
           <span>Model Confidence: </span>
           <span id="modelConfidence" style="color: var(--accent); font-weight: 600;">0%</span>
         </div>
 
         <!-- Reset Button -->
-        <button class="btn-nav btn-prev" style="width: 100%; margin-top: 1rem;" onclick="resetPrediction()">
-          ↻ New Prediction
-        </button>
+        <button class="btn-nav btn-prev" style="width: 100%; margin-top: 1rem;" onclick="resetPrediction()">↻ New Prediction</button>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-// Section navigation
+// ========== CSRF TOKEN HANDLER ==========
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+
+// ========== SECTION NAVIGATION ==========
 let currentSection = 1;
 const totalSections = 4;
 
 function updateNavigation() {
-  // Update step indicators
   document.querySelectorAll('.step-item').forEach((item, index) => {
     const stepNum = index + 1;
     item.classList.toggle('active', stepNum === currentSection);
     item.classList.toggle('completed', stepNum < currentSection);
   });
 
-  // Show/hide sections
   document.querySelectorAll('.form-section-card').forEach(section => {
     const sectionNum = parseInt(section.dataset.section);
     section.classList.toggle('active', sectionNum === currentSection);
   });
 
-  // Update buttons
-  document.getElementById('prevBtn').style.display = currentSection > 1 ? 'inline-flex' : 'none';
-  document.getElementById('nextBtn').style.display = currentSection < totalSections ? 'inline-flex' : 'none';
-  document.getElementById('submitBtn').style.display = currentSection === totalSections ? 'inline-flex' : 'none';
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const submitBtn = document.getElementById('submitBtn');
+  if (prevBtn) prevBtn.style.display = currentSection > 1 ? 'inline-flex' : 'none';
+  if (nextBtn) nextBtn.style.display = currentSection < totalSections ? 'inline-flex' : 'none';
+  if (submitBtn) submitBtn.style.display = currentSection === totalSections ? 'inline-flex' : 'none';
 }
 
 document.getElementById('prevBtn').addEventListener('click', () => {
@@ -1065,107 +1075,135 @@ document.getElementById('nextBtn').addEventListener('click', () => {
   }
 });
 
-// Form submission
-document.getElementById('predictForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
+// ========== FORM SUBMISSION ==========
+const form = document.getElementById('predictForm');
+if (form) {
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
 
-  // Show loading state
-  document.getElementById('idleState').style.display = 'none';
-  document.getElementById('resultState').style.display = 'none';
-  document.getElementById('loadingState').style.display = 'block';
-  document.getElementById('resultBadge').textContent = 'Analyzing...';
-  document.getElementById('resultBadge').className = 'result-badge';
-
-  const formData = new FormData(e.target);
-
-  try {
-    const response = await fetch('/predict/api/', {
-      method: 'POST',
-      body: formData
-    });
-
-    const data = await response.json();
-
-    if (data.success) {
-      displayResults(data);
-    } else {
-      throw new Error(data.error || 'Prediction failed');
+    // Show loading state
+    document.getElementById('idleState').style.display = 'none';
+    document.getElementById('resultState').style.display = 'none';
+    document.getElementById('loadingState').style.display = 'block';
+    const resultBadge = document.getElementById('resultBadge');
+    if (resultBadge) {
+      resultBadge.textContent = 'Analyzing...';
+      resultBadge.className = 'result-badge';
     }
-  } catch (error) {
-    alert('Error: ' + error.message);
-    resetPrediction();
-  }
-});
 
+    const formData = new FormData(form);
+
+    try {
+      const response = await fetch('/predict/api/', {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrftoken,
+        },
+        body: formData,
+        credentials: 'same-origin',
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Server error (${response.status}): ${errorText.substring(0, 100)}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        displayResults(data);
+      } else {
+        throw new Error(data.error || 'Prediction failed');
+      }
+    } catch (error) {
+      console.error('Prediction error:', error);
+      alert('Error: ' + error.message);
+      resetPrediction();
+    }
+  });
+} else {
+  console.error('Form with id "predictForm" not found');
+}
+
+// ========== RESULT DISPLAY FUNCTIONS ==========
 function displayResults(data) {
   document.getElementById('loadingState').style.display = 'none';
   document.getElementById('resultState').style.display = 'block';
 
-  // Update gauge
+  // Gauge
   const gaugeCanvas = document.getElementById('gaugeCanvas');
-  const ctx = gaugeCanvas.getContext('2d');
-  const lp = data.leave_probability;
-  
-  drawGauge(ctx, lp);
+  if (gaugeCanvas) {
+    const ctx = gaugeCanvas.getContext('2d');
+    drawGauge(ctx, data.leave_probability);
+  }
 
-  // Update numbers
-  document.getElementById('gaugeNumber').textContent = lp.toFixed(1) + '%';
+  // Numbers
+  document.getElementById('gaugeNumber').textContent = data.leave_probability.toFixed(1) + '%';
   document.getElementById('stayProb').textContent = data.stay_probability.toFixed(1) + '%';
-  document.getElementById('leaveProb').textContent = lp.toFixed(1) + '%';
+  document.getElementById('leaveProb').textContent = data.leave_probability.toFixed(1) + '%';
   
-  // Update bars
+  // Bars
   setTimeout(() => {
-    document.getElementById('stayBar').style.width = data.stay_probability + '%';
-    document.getElementById('leaveBar').style.width = lp + '%';
+    const stayBar = document.getElementById('stayBar');
+    const leaveBar = document.getElementById('leaveBar');
+    if (stayBar) stayBar.style.width = data.stay_probability + '%';
+    if (leaveBar) leaveBar.style.width = data.leave_probability + '%';
   }, 100);
 
-  // Update badge
+  // Badge
   const badge = document.getElementById('resultBadge');
-  badge.textContent = data.risk_level + ' RISK';
-  badge.className = 'result-badge badge-' + data.risk_level.toLowerCase();
+  if (badge) {
+    badge.textContent = data.risk_level + ' RISK';
+    badge.className = 'result-badge badge-' + data.risk_level.toLowerCase();
+  }
 
-  // Update risk factors
+  // Risk Factors
+  const riskFactorsDiv = document.getElementById('riskFactors');
+  const riskTagsDiv = document.getElementById('riskTags');
   if (data.risk_factors && data.risk_factors.length > 0) {
-    document.getElementById('riskFactors').style.display = 'block';
-    document.getElementById('riskTags').innerHTML = data.risk_factors
-      .map(f => `<span class="factor-tag">⚠️ ${f}</span>`)
-      .join('');
+    if (riskFactorsDiv) riskFactorsDiv.style.display = 'block';
+    if (riskTagsDiv) {
+      riskTagsDiv.innerHTML = data.risk_factors.map(f => `<span class="factor-tag">⚠️ ${f}</span>`).join('');
+    }
   } else {
-    document.getElementById('riskFactors').style.display = 'none';
+    if (riskFactorsDiv) riskFactorsDiv.style.display = 'none';
   }
 
-  // Update recommendations
+  // Recommendations
+  const recDiv = document.getElementById('recommendations');
+  const recListDiv = document.getElementById('recList');
   if (data.recommendations && data.recommendations.length > 0) {
-    document.getElementById('recommendations').style.display = 'block';
-    document.getElementById('recList').innerHTML = data.recommendations
-      .map(rec => `<div class="recommendation-item">
-        <span class="recommendation-icon">💡</span>
-        ${rec}
-      </div>`)
-      .join('');
+    if (recDiv) recDiv.style.display = 'block';
+    if (recListDiv) {
+      recListDiv.innerHTML = data.recommendations.map(rec => `
+        <div class="recommendation-item">
+          <span class="recommendation-icon">💡</span> ${rec}
+        </div>
+      `).join('');
+    }
   } else {
-    document.getElementById('recommendations').style.display = 'none';
+    if (recDiv) recDiv.style.display = 'none';
   }
 
-  // Update confidence
-  document.getElementById('modelConfidence').textContent = data.model_confidence.toFixed(1) + '%';
+  // Confidence
+  const confSpan = document.getElementById('modelConfidence');
+  if (confSpan) confSpan.textContent = data.model_confidence.toFixed(1) + '%';
 }
 
 function drawGauge(ctx, percentage) {
   const width = 200, height = 120;
   ctx.clearRect(0, 0, width, height);
 
-  // Draw background arc
+  // Background arc
   ctx.beginPath();
   ctx.arc(100, 100, 80, Math.PI, 2 * Math.PI);
   ctx.strokeStyle = 'rgba(255,255,255,0.1)';
   ctx.lineWidth = 15;
   ctx.stroke();
 
-  // Draw percentage arc
+  // Percentage arc
   const startAngle = Math.PI;
   const endAngle = Math.PI + (percentage / 100) * Math.PI;
-  
   let color;
   if (percentage < 30) color = '#47ffa0';
   else if (percentage < 60) color = '#ffbd47';
@@ -1177,7 +1215,7 @@ function drawGauge(ctx, percentage) {
   ctx.lineWidth = 15;
   ctx.stroke();
 
-  // Draw center text
+  // Center text
   ctx.font = 'bold 24px "Syne"';
   ctx.fillStyle = color;
   ctx.textAlign = 'center';
@@ -1188,23 +1226,29 @@ function resetPrediction() {
   document.getElementById('idleState').style.display = 'block';
   document.getElementById('resultState').style.display = 'none';
   document.getElementById('loadingState').style.display = 'none';
-  document.getElementById('resultBadge').textContent = 'Ready';
-  document.getElementById('resultBadge').className = 'result-badge';
+  const badge = document.getElementById('resultBadge');
+  if (badge) {
+    badge.textContent = 'Ready';
+    badge.className = 'result-badge';
+  }
   
-  // Reset bars
-  document.getElementById('stayBar').style.width = '0%';
-  document.getElementById('leaveBar').style.width = '0%';
+  const stayBar = document.getElementById('stayBar');
+  const leaveBar = document.getElementById('leaveBar');
+  if (stayBar) stayBar.style.width = '0%';
+  if (leaveBar) leaveBar.style.width = '0%';
   
-  // Clear canvas
-  const ctx = document.getElementById('gaugeCanvas').getContext('2d');
-  ctx.clearRect(0, 0, 200, 120);
+  const gaugeCanvas = document.getElementById('gaugeCanvas');
+  if (gaugeCanvas) {
+    const ctx = gaugeCanvas.getContext('2d');
+    ctx.clearRect(0, 0, 200, 120);
+  }
 }
 
 // Initialize
 updateNavigation();
 resetPrediction();
 
-// Add keyboard navigation
+// Keyboard navigation
 document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight' && currentSection < totalSections) {
     document.getElementById('nextBtn').click();
